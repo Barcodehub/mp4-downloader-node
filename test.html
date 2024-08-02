@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <input type="text" id="urlInput" value="https://www.youtube.com/watch?v=ZLqq2MP3ztc">
+  <select id="qualitySelect">
+    <option value="best">Mejor calidad disponible</option>
+    <option value="hd">HD (1080p máximo)</option>
+  </select>
+  <select id="typeSelect">
+    <option value="video">Video único</option>
+    <option value="playlist">Lista de reproducción</option>
+  </select>
+  <button onclick="downloadFile()">Descargar</button>
+
+  <script>
+    function downloadFile() {
+      const url = document.getElementById('urlInput').value;
+      const quality = document.getElementById('qualitySelect').value;
+      const type = document.getElementById('typeSelect').value;
+      fetch('http://localhost:3000/api/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url, quality, type }),
+      })
+      .then(response => response.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = type === 'playlist' ? 'playlist.zip' : 'video.mp4';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(error => console.error('Error:', error));
+    }
+  </script>
+</body>
+</html>
