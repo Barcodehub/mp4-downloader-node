@@ -1,0 +1,71 @@
+https://github.com/ytdl-org/youtube-dl/blob/master/README.md#format-selection
+
+
+Many of the files are only audio or only video. A random youtube video for example:
+
+Code:
+>youtube-dl -F https://www.youtube.com/watch?v=4c4ui_TlGws
+
+[youtube] 4c4ui_TlGws: Downloading webpage
+[youtube] 4c4ui_TlGws: Downloading video info webpage
+[info] Available formats for 4c4ui_TlGws:
+format code  extension  resolution note
+249          webm       audio only DASH audio   51k , opus @ 50k, 5.13MiB
+250          webm       audio only DASH audio   64k , opus @ 70k, 6.40MiB
+171          webm       audio only DASH audio  100k , vorbis@128k, 10.39MiB
+251          webm       audio only DASH audio  116k , opus @160k, 11.64MiB
+140          m4a        audio only DASH audio  131k , m4a_dash container, mp4a.40.2@128k, 14.25MiB
+160          mp4        256x144    144p   57k , avc1.4d400c, 25fps, video only, 4.01MiB
+133          mp4        426x240    240p  100k , avc1.4d4015, 25fps, video only, 7.07MiB
+278          webm       256x144    144p  105k , webm container, vp9, 25fps, video only, 9.78MiB
+242          webm       426x240    240p  163k , vp9, 25fps, video only, 10.54MiB
+134          mp4        640x360    360p  177k , avc1.4d401e, 25fps, video only, 13.39MiB
+243          webm       640x360    360p  280k , vp9, 25fps, video only, 16.39MiB
+135          mp4        854x480    480p  283k , avc1.4d401e, 25fps, video only, 21.63MiB
+244          webm       854x480    480p  445k , vp9, 25fps, video only, 23.40MiB
+136          mp4        1280x720   720p  481k , avc1.4d401f, 25fps, video only, 34.86MiB
+247          webm       1280x720   720p  789k , vp9, 25fps, video only, 37.84MiB
+137          mp4        1920x1080  1080p  881k , avc1.640028, 25fps, video only, 61.92MiB
+248          webm       1920x1080  1080p 1318k , vp9, 25fps, video only, 61.02MiB
+17           3gp        176x144    small , mp4v.20.3, mp4a.40.2@ 24k, 8.83MiB
+36           3gp        320x180    small , mp4v.20.3, mp4a.40.2, 24.70MiB
+18           mp4        640x360    medium , avc1.42001E, mp4a.40.2@ 96k, 39.64MiB
+43           webm       640x360    medium , vp8.0, vorbis@128k, 55.86MiB
+22           mp4        1280x720   hd720 , avc1.64001F, mp4a.40.2@192k (best)
+
+
+$ youtube-dl --get-filename -o '%(title)s.%(ext)s' BaW_jenozKc
+youtube-dl test video ''_ä↭𝕐.mp4    # All kinds of weird characters
+
+$ youtube-dl --get-filename -o '%(title)s.%(ext)s' BaW_jenozKc --restrict-filenames
+youtube-dl_test_video_.mp4          # A simple file name
+
+# Download YouTube playlist videos in separate directory indexed by video order in a playlist
+$ youtube-dl -o '%(playlist)s/%(playlist_index)s - %(title)s.%(ext)s' https://www.youtube.com/playlist?list=PLwiyx1dc3P2JR9N8gQaQN_BCvlSlap7re
+
+# Download all playlists of YouTube channel/user keeping each playlist in separate directory:
+$ youtube-dl -o '%(uploader)s/%(playlist)s/%(playlist_index)s - %(title)s.%(ext)s' https://www.youtube.com/user/TheLinuxFoundation/playlists
+
+# Download Udemy course keeping each chapter in separate directory under MyVideos directory in your home
+$ youtube-dl -u user -p password -o '~/MyVideos/%(playlist)s/%(chapter_number)s - %(chapter)s/%(title)s.%(ext)s' https://www.udemy.com/java-tutorial/
+
+# Download entire series season keeping each series and each season in separate directory under C:/MyVideos
+$ youtube-dl -o "C:/MyVideos/%(series)s/%(season_number)s - %(season)s/%(episode_number)s - %(episode)s.%(ext)s" https://videomore.ru/kino_v_detalayah/5_sezon/367617
+
+# Stream the video being downloaded to stdout
+$ youtube-dl -o - BaW_jenozKc
+
+# Download best mp4 format available or any other best if no mp4 available
+$ youtube-dl -f 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+
+# Download best format available but no better than 480p
+$ youtube-dl -f 'bestvideo[height<=480]+bestaudio/best[height<=480]'
+
+# Download best video only format but no bigger than 50 MB
+$ youtube-dl -f 'best[filesize<50M]'
+
+# Download best format available via direct link over HTTP/HTTPS protocol
+$ youtube-dl -f '(bestvideo+bestaudio/best)[protocol^=http]'
+
+# Download the best video format and the best audio format without merging them
+$ youtube-dl -f 'bestvideo,bestaudio' -o '%(title)s.f%(format_id)s.%(ext)s'
