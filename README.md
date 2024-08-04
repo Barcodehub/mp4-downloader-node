@@ -4,7 +4,7 @@ A Node.js application that allows users to download individual YouTube videos or
 
 ## Features
 
-- Download individual YouTube videos
+- Download individual YouTube videos, facebook watch, tiktok...
 - Download entire YouTube playlists
 - Choose video quality (best or HD)
 - Automatic conversion to MP4 format
