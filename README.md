@@ -13,6 +13,12 @@ A Node.js application that allows users to download individual YouTube videos or
 
 ## Usage
 
+Create a .env:
+ ```
+PORT=3000
+NODE_ENV=development
+ ```
+
 Start the server:
 
  ```
