@@ -3,24 +3,22 @@ const path = require('path');
 const fs = require('fs');
 const archiver = require('archiver');
 
-
-function findMp4Files(dir) {
+function findMediaFiles(dir, extensions = ['.mp4', '.mkv']) {
   let results = [];
   const list = fs.readdirSync(dir);
   list.forEach(file => {
     file = path.join(dir, file);
     const stat = fs.statSync(file);
     if (stat && stat.isDirectory()) { 
-      results = results.concat(findMp4Files(file));
+      results = results.concat(findMediaFiles(file, extensions));
     } else {
-      if (path.extname(file).toLowerCase() === '.mp4') {
+      if (extensions.includes(path.extname(file).toLowerCase())) {
         results.push(file);
       }
     }
   });
   return results;
 }
-
 
 exports.downloadFile = async (req, res, next) => {
   const { url, quality, type } = req.body;
@@ -32,28 +30,33 @@ exports.downloadFile = async (req, res, next) => {
   console.log('Iniciando descarga para:', url);
 
   try {
-    if (type === 'playlist') {
+    const isPlaylist = url.includes('list=');
+    if (type === 'playlist' && !isPlaylist) {
+      return res.status(400).json({ message: 'La URL proporcionada no es una playlist' });
+    }
+
+    if (type === 'video' && isPlaylist) {
+      return res.status(400).json({ message: 'La URL proporcionada es una playlist, no un video individual' });
+    }
+
+    if (type === 'playlist' && isPlaylist) {
       try {
         const playlistDir = await videoService.downloadPlaylist(url, quality);
         console.log('Directorio de la playlist:', playlistDir);
-    
-        const mp4Files = findMp4Files(playlistDir);
-        console.log('Archivos MP4 encontrados:', mp4Files);
-    
-        if (mp4Files.length === 0) {
-          console.log('No se encontraron archivos MP4. Verificando otros formatos...');
-          const allFiles = findMp4Files(playlistDir);
-          console.log('Otros archivos encontrados:', allFiles);
-    
-          if (allFiles.length === 0) {
-            return res.status(404).json({ message: 'No se encontraron archivos para descargar' });
-          }
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="playlist.zip"`);
+
+        const mediaFiles = findMediaFiles(playlistDir);
+        console.log('Archivos multimedia encontrados:', mediaFiles);
+
+        if (mediaFiles.length === 0) {
+          return res.status(404).json({ message: 'No se encontraron archivos para descargar' });
         }
-    
+
         const zipFilename = 'playlist.zip';
         const output = fs.createWriteStream(zipFilename);
         const archive = archiver('zip', { zlib: { level: 9 } });
-    
+
         output.on('close', () => {
           console.log('Archivo zip creado');
           res.download(zipFilename, (err) => {
@@ -64,20 +67,19 @@ exports.downloadFile = async (req, res, next) => {
             });
           });
         });
-    
+
         archive.on('error', (err) => {
           console.error('Error al crear el archivo zip:', err);
           res.status(500).json({ message: 'Error al crear el archivo zip', error: err.message });
         });
-    
+
         archive.pipe(output);
-    
-        const filesToAdd = mp4Files.length > 0 ? mp4Files : allFiles;
-        filesToAdd.forEach(file => {
+
+        mediaFiles.forEach(file => {
           console.log('Agregando al zip:', file);
           archive.file(file, { name: path.basename(file) });
         });
-    
+
         await archive.finalize();
       } catch (error) {
         console.error('Error en el proceso de la playlist:', error);
@@ -86,6 +88,8 @@ exports.downloadFile = async (req, res, next) => {
     } else {
       const videoFilePath = await videoService.downloadVideo(url, quality);
       console.log('Video descargado:', videoFilePath);
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Content-Disposition', `attachment; filename="video.mp4"`);
     
       res.download(videoFilePath, (err) => {
         if (err) {

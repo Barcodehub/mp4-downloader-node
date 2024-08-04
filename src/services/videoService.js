@@ -13,11 +13,13 @@ exports.downloadVideo = async (url, quality = 'best') => {
 
     const options = {
       output: outputTemplate,
-      format: quality === 'hd' ? 'bestvideo[height<=1080]+bestaudio/best' : 'best',
+      format: quality === 'hd' 
+        ? 'bestvideo[height<=1080]+bestaudio/best[ext=mp4]/best' 
+        : 'bestvideo+bestaudio/best[ext=mp4]/best',
+      mergeOutputFormat: 'mkv',  // Forzar la salida a MKV
       noCheckCertificates: true,
       noWarnings: true,
-      addHeader: ['referer:youtube.com', 'user-agent:googlebot'],
-      mergeOutputFormat: 'mp4'  // Forzar la salida a MP4
+      addHeader: ['referer:youtube.com', 'user-agent:googlebot']
     };
 
     const result = await youtubeDl(url, options);
@@ -56,7 +58,6 @@ exports.deleteFile = (filename) => {
   }
 };
 
-
 exports.downloadPlaylist = async (url, quality = 'best') => {
   try {
     console.log('Iniciando descarga de la lista de reproducción...');
@@ -70,15 +71,14 @@ exports.downloadPlaylist = async (url, quality = 'best') => {
       output: outputTemplate,
       format: quality === 'hd' 
         ? 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best' 
-        : 'best[ext=mp4]/best',
-      mergeOutputFormat: 'mp4',
+        : 'bestvideo+bestaudio/best[ext=mp4]/best',
+      mergeOutputFormat: 'mkv',
       noCheckCertificate: true,
       noWarnings: true,
       addHeader: ['referer:youtube.com', 'user-agent:googlebot'],
       yesPlaylist: true,
       embedThumbnail: true,
       addMetadata: true,
-      // Eliminamos la opción postProcessors
     };
 
     const result = await youtubeDl(url, options);
