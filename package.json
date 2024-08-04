@@ -1,7 +1,8 @@
 {
-    "name": "file-downloader",
+    "name": "mp4-downloader",
     "version": "1.0.0",
     "description": "Backend app to download PDFs and videos",
+    "author": "Brayan Barco",
     "main": "src/app.js",
     "scripts": {
         "start": "node src/app.js",
