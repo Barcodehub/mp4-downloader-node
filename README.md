@@ -42,7 +42,7 @@ The server will start running on `http://localhost:3000` (or your configured por
 
 - To download a playlist:
   ```
-  POST /download
+  POST /api/download
   {
     "url": "https://www.youtube.com/playlist?list=PLAYLIST_ID",
     "quality": "hd",
@@ -52,6 +52,7 @@ The server will start running on `http://localhost:3000` (or your configured por
 
 The server will process the request and send the downloaded file(s) as a response.
 
+`Use one POST request at a time.`
 
 ## Acknowledgments
 
