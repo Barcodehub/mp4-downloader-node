@@ -16,26 +16,45 @@ exports.downloadVideo = async (url, quality = 'best') => {
       format: quality === 'hd' ? 'bestvideo[height<=1080]+bestaudio/best' : 'best',
       noCheckCertificates: true,
       noWarnings: true,
-      addHeader: ['referer:youtube.com', 'user-agent:googlebot']
+      addHeader: ['referer:youtube.com', 'user-agent:googlebot'],
+      mergeOutputFormat: 'mp4'  // Forzar la salida a MP4
     };
 
     const result = await youtubeDl(url, options);
     console.log('Descarga completada:', result);
     
+    // Buscar el archivo descargado
     const files = fs.readdirSync('downloads');
-    const downloadedFile = files.find(file => file.includes(path.parse(result).name));
+    console.log('Archivos en el directorio de descargas:', files);
+
+    // Buscar cualquier archivo que no sea un directorio
+    const downloadedFile = files.find(file => {
+      const filePath = path.join('downloads', file);
+      return fs.statSync(filePath).isFile();
+    });
     
     if (!downloadedFile) {
       throw new Error('No se pudo encontrar el archivo descargado');
     }
 
-    return path.join('downloads', downloadedFile);
+    const filePath = path.join('downloads', downloadedFile);
+    console.log('Archivo encontrado:', filePath);
+
+    return filePath;
   } catch (error) {
     console.error('Error en downloadVideo:', error);
     throw error;
   }
 };
 
+exports.deleteFile = (filename) => {
+  try {
+    fs.unlinkSync(filename);
+    console.log('Archivo eliminado:', filename);
+  } catch (err) {
+    console.error('Error al eliminar el archivo:', err);
+  }
+};
 
 
 exports.downloadPlaylist = async (url, quality = 'best') => {
@@ -61,7 +80,6 @@ exports.downloadPlaylist = async (url, quality = 'best') => {
       addMetadata: true,
       // Eliminamos la opción postProcessors
     };
-
 
     const result = await youtubeDl(url, options);
     console.log('Descarga de la lista de reproducción completada:', result);
