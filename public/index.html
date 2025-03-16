@@ -3,24 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Descargar videos de YouTube</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>MP4 Downloader Master</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-    <div class="container mt-5">
-        <div class="card shadow">
-            <div class="card-body">
-                <h1 class="card-title">MP4 Downloader Master</h1>
-                <form action="/download" method="POST" class="mb-3">
-                    <div class="mb-3">
-                        <label for="url" class="form-label">Ingresa la URL del video:</label>
-                        <input type="text" id="url" name="url" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Descargar video</button>
-                </form>
-                
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">MP4 Downloader Master</h1>
+        <form action="/download" method="POST" class="space-y-4">
+            <div>
+                <label for="url" class="block text-sm font-medium text-gray-700">Ingresa la URL del video:</label>
+                <input
+                    type="text"
+                    id="url"
+                    name="url"
+                    class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    required
+                />
             </div>
-        </div>
+            <button
+    type="submit"
+    class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+>
+    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+    </svg>
+    Descargar video
+</button>
+        </form>
     </div>
 </body>
 </html>
