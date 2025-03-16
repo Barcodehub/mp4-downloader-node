@@ -5,8 +5,8 @@
     "author": "Brayan Barco",
     "main": "src/app.js",
     "scripts": {
-        "start": "node src/app.js",
-        "dev": "nodemon src/app.js"
+        "start": "node src/index.js",
+        "dev": "nodemon src/index.js"
     },
     "dependencies": {
         "archiver": "^7.0.1",
