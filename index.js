@@ -16,13 +16,34 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Ruta para descargar un video individual
+// Función para determinar si la URL es una playlist
+const isPlaylist = (url) => {
+    return url.includes('list=');
+};
+
+// Ruta para manejar la descarga (video o playlist)
 app.post('/download', async (req, res) => {
     const url = req.body.url;
     if (!url) {
         return res.status(400).send('URL no proporcionada');
     }
 
+    try {
+        if (isPlaylist(url)) {
+            // Si es una playlist, redirigir a la ruta de descarga de playlists
+            return handlePlaylistDownload(url, res);
+        } else {
+            // Si es un video, redirigir a la ruta de descarga de videos
+            return handleVideoDownload(url, res);
+        }
+    } catch (error) {
+        console.error('Error al procesar la solicitud:', error);
+        res.status(500).send('Error al procesar la solicitud');
+    }
+});
+
+// Función para manejar la descarga de un video individual
+const handleVideoDownload = async (url, res) => {
     try {
         // Definir la ruta de descarga
         const outputPath = path.join(__dirname, 'downloads', '%(title)s.%(ext)s');
@@ -51,15 +72,10 @@ app.post('/download', async (req, res) => {
         console.error('Error al descargar el video:', error);
         res.status(500).send('Error al descargar el video');
     }
-});
+};
 
-// Ruta para descargar una playlist como .zip
-app.post('/download-playlist', async (req, res) => {
-    const url = req.body.url;
-    if (!url) {
-        return res.status(400).send('URL no proporcionada');
-    }
-
+// Función para manejar la descarga de una playlist
+const handlePlaylistDownload = async (url, res) => {
     try {
         // Crear una carpeta temporal para la playlist
         const playlistFolder = path.join(__dirname, 'downloads', `playlist_${Date.now()}`);
@@ -101,7 +117,7 @@ app.post('/download-playlist', async (req, res) => {
         console.error('Error al descargar la playlist:', error);
         res.status(500).send('Error al descargar la playlist');
     }
-});
+};
 
 // Iniciar el servidor
 app.listen(PORT, () => {
