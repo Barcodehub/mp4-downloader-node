@@ -3,10 +3,10 @@
     "version": "1.0.0",
     "description": "Backend app to download PDFs and videos",
     "author": "Brayan Barco",
-    "main": "src/app.js",
+    "main": "index.js",
     "scripts": {
-        "start": "node src/index.js",
-        "dev": "nodemon src/index.js"
+        "start": "node index.js",
+        "dev": "nodemon index.js"
     },
     "dependencies": {
         "archiver": "^7.0.1",
@@ -15,7 +15,7 @@
         "dotenv": "^10.0.0",
         "express": "^4.21.2",
         "fluent-ffmpeg": "^2.1.3",
-        "youtube-dl-exec": "^3.0.19",
+        "youtube-dl-exec": "^3.0.20",
         "yt-dlp-exec": "^1.0.2",
         "ytdl-core": "^4.9.1"
     },

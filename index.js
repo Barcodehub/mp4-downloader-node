@@ -24,6 +24,8 @@ const isPlaylist = (url) => {
 // Ruta para manejar la descarga (video o playlist)
 app.post('/download', async (req, res) => {
     const url = req.body.url;
+    const audioOnly = req.body.audioOnly === 'true';
+    
     if (!url) {
         return res.status(400).send('URL no proporcionada');
     }
@@ -31,10 +33,10 @@ app.post('/download', async (req, res) => {
     try {
         if (isPlaylist(url)) {
             // Si es una playlist, redirigir a la ruta de descarga de playlists
-            return handlePlaylistDownload(url, res);
+            return handleLargePlaylistDownload(url, res, audioOnly);
         } else {
             // Si es un video, redirigir a la ruta de descarga de videos
-            return handleVideoDownload(url, res);
+            return handleVideoDownload(url, res, audioOnly);
         }
     } catch (error) {
         console.error('Error al procesar la solicitud:', error);
@@ -43,13 +45,24 @@ app.post('/download', async (req, res) => {
 });
 
 // Función para manejar la descarga de un video individual
-const handleVideoDownload = async (url, res) => {
+const handleVideoDownload = async (url, res, audioOnly = false) => {
     try {
         // Definir la ruta de descarga
         const outputPath = path.join(__dirname, 'downloads', '%(title)s.%(ext)s');
+        const ffmpegPath = path.join(__dirname, 'ffmpeg', 'bin', 'ffmpeg.exe');
 
-        // Descargar el video
-        await exec(url, { output: outputPath });
+        // Opciones de descarga
+        const options = { 
+            output: outputPath,
+            ffmpegLocation: ffmpegPath, // Ajusta esta ruta
+            ...(audioOnly && {
+                extractAudio: true,
+                audioFormat: 'mp3',
+                audioQuality: '0'
+            })
+        };
+        // Descargar el video o audio
+        await exec(url, options);
 
         // Obtener el archivo descargado
         const files = fs.readdirSync(path.join(__dirname, 'downloads'));
@@ -57,8 +70,14 @@ const handleVideoDownload = async (url, res) => {
             return res.status(404).send('No se encontró ningún archivo descargado');
         }
 
+        // Encontrar el archivo más reciente
+        const downloadedFile = files.reduce((prev, current) => {
+            const prevPath = path.join(__dirname, 'downloads', prev);
+            const currentPath = path.join(__dirname, 'downloads', current);
+            return fs.statSync(prevPath).mtimeMs > fs.statSync(currentPath).mtimeMs ? prev : current;
+        });
+
         // Enviar el archivo al cliente
-        const downloadedFile = files[files.length - 1]; // Último archivo descargado
         res.download(path.join(__dirname, 'downloads', downloadedFile), downloadedFile, (err) => {
             if (err) {
                 console.error('Error al enviar el archivo:', err);
@@ -75,49 +94,124 @@ const handleVideoDownload = async (url, res) => {
 };
 
 // Función para manejar la descarga de una playlist
-const handlePlaylistDownload = async (url, res) => {
+const handleLargePlaylistDownload = async (url, res, audioOnly = false) => {
     try {
-        // Crear una carpeta temporal para la playlist
+        // Configuración inicial
         const playlistFolder = path.join(__dirname, 'downloads', `playlist_${Date.now()}`);
         fs.mkdirSync(playlistFolder, { recursive: true });
+        const ffmpegPath = path.join(__dirname, 'ffmpeg', 'bin', 'ffmpeg.exe');
 
-        // Descargar la playlist en la carpeta temporal
-        await exec(url, { output: path.join(playlistFolder, '%(title)s.%(ext)s') });
+        // Opciones optimizadas para playlists largas
+        const options = {
+            output: path.join(playlistFolder, '%(title)s.%(ext)s'),
+            ffmpegLocation: ffmpegPath,
+            ignoreErrors: true,
+            noWarnings: true,
+            retries: 5,
+            fragmentRetries: 5,
+            limitRate: '1M', // Limitar velocidad para evitar bloqueos
+            skipUnavailable: true,       // Omite videos eliminados/privados
+            sleepInterval: 10, // Esperar entre descargas
+            maxSleepInterval: 15,
+            playlistItems: '1-100', // Limitar cantidad si es necesario
+            concurrentFragments: 2, // Descargas concurrentes moderadas
+            ...(audioOnly && {
+                extractAudio: true,
+                audioFormat: 'mp3',
+                audioQuality: '0'
+            })
+        };
 
-        // Crear un archivo .zip con los videos descargados
-        const zipFilePath = path.join(__dirname, 'downloads', `playlist_${Date.now()}.zip`);
-        const output = fs.createWriteStream(zipFilePath);
-        const archive = archiver('zip', { zlib: { level: 9 } });
+        // Verificar FFmpeg
+        if (audioOnly && !fs.existsSync(ffmpegPath)) {
+            throw new Error('Se requiere FFmpeg para conversión a MP3');
+        }
 
-        // Manejar eventos de la compresión
-        output.on('close', () => {
-            console.log(`Tamaño del archivo .zip: ${archive.pointer()} bytes`);
-            // Enviar el archivo .zip al cliente
-            res.download(zipFilePath, `playlist.zip`, (err) => {
-                if (err) {
-                    console.error('Error al enviar el archivo .zip:', err);
-                    res.status(500).send('Error al enviar el archivo .zip');
+        // Descargar en bloques (para playlists muy grandes)
+        const MAX_ITEMS_PER_BLOCK = 100;
+        let downloadedCount = 0;
+        let errors = [];
+
+        while (true) {
+            const start = downloadedCount + 1;
+            const end = start + MAX_ITEMS_PER_BLOCK - 1;
+            
+            try {
+                await exec(url, {
+                    ...options,
+                    playlistItems: `${start}-${end}`
+                });
+                
+                // Verificar progreso
+                const currentFiles = fs.readdirSync(playlistFolder)
+                    .filter(file => fs.statSync(path.join(playlistFolder, file)).size > 0);
+                
+                if (currentFiles.length <= downloadedCount) break; // No hay más progreso
+                
+                downloadedCount = currentFiles.length;
+                console.log(`Descargados ${downloadedCount} items...`);
+                
+                if (downloadedCount % 50 === 0) {
+                    // Crear ZIP parcial cada 50 items
+                    await createPartialZip(playlistFolder, downloadedCount);
                 }
+            } catch (blockError) {
+                console.error(`Error en bloque ${start}-${end}:`, blockError.message);
+                errors.push(blockError.message);
+                if (errors.length > 3) break;
+            }
+        }
 
-                // Eliminar la carpeta temporal y el archivo .zip después de enviarlo
-                fs.rmdirSync(playlistFolder, { recursive: true });
-                fs.unlinkSync(zipFilePath);
-            });
+        // Crear ZIP final
+        const zipFilePath = path.join(__dirname, 'downloads', `playlist_partial_${Date.now()}.zip`);
+        await createFinalZip(playlistFolder, zipFilePath);
+
+        // Enviar respuesta
+        res.download(zipFilePath, `playlist_partial.zip`, (err) => {
+            if (err) console.error('Error al enviar ZIP:', err);
+            // Limpieza
+            fs.rmSync(playlistFolder, { recursive: true, force: true });
+            fs.unlinkSync(zipFilePath);
         });
 
-        archive.on('error', (err) => {
-            throw err;
-        });
-
-        // Comprimir los archivos
-        archive.pipe(output);
-        archive.directory(playlistFolder, false);
-        archive.finalize();
     } catch (error) {
-        console.error('Error al descargar la playlist:', error);
-        res.status(500).send('Error al descargar la playlist');
+        console.error('Error en playlist larga:', error);
+        res.status(500).json({
+            success: false,
+            downloaded: downloadedCount,
+            errors: error,
+            message: `Se descargaron ${downloadedCount} items con ${error.length} errores`
+        });
     }
 };
+
+// Funciones auxiliares
+async function createPartialZip(folder, count) {
+    const zipPath = path.join(__dirname, 'downloads', `playlist_partial_${count}.zip`);
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    
+    return new Promise((resolve, reject) => {
+        output.on('close', resolve);
+        archive.on('error', reject);
+        archive.pipe(output);
+        archive.directory(folder, false);
+        archive.finalize();
+    });
+}
+
+async function createFinalZip(folder, zipPath) {
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    
+    return new Promise((resolve, reject) => {
+        output.on('close', resolve);
+        archive.on('error', reject);
+        archive.pipe(output);
+        archive.directory(folder, false);
+        archive.finalize();
+    });
+}
 
 // Iniciar el servidor
 app.listen(PORT, () => {
